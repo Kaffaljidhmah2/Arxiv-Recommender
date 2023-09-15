@@ -1,0 +1,4 @@
+.openai_api_key
+*.pkl
+__pycache__
+*__pycache__

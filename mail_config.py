@@ -1,0 +1,4 @@
+sender=''
+passcode=''
+smtpserver=''
+receiver=''
