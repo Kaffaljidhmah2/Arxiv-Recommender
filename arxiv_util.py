@@ -10,13 +10,13 @@ from datetime import date
 @dataclass
 class ArxivPaper:
     arxiv_id: str
-    title: str 
+    title: str
     author: List[str]
     subject: List[str]
     comment: List[str]
     abstract: Optional[str]
 
-    
+
 
 def arxiv_parser(txt):
     """
@@ -81,18 +81,34 @@ def get_today_paper(cate_list=['cs.LG', 'cs.CL', 'cs.AI'], is_save=False, verbos
     paper_dict = {}
     for cate in cate_list:
         url = f"https://arxiv.org/list/{cate}/pastweek?skip=0&show=2000"
-        arxiv_raw = requests.get(url).text 
+        print(f"fetching {url}")
+
+        retry_count = 0
+        while retry_count <= 5:
+            try:
+                arxiv_raw = requests.get(url).text
+                time.sleep(20) # TODO
+                break
+            except:
+                retry_count += 1
+
         papers = list(decode_arxiv_webpage(arxiv_raw))
-        today_max = int(decode_date(arxiv_raw)[0][0]) - 1 ## decode_date returns a list of (start index, date) for previous dates. 
+        today_max = int(decode_date(arxiv_raw)[0][0]) - 1 ## decode_date returns a list of (start index, date) for previous dates.
         papers_today = papers[:today_max]
         for _, obj in papers_today:
             paper_dict[obj.arxiv_id] = obj
-        
+
     for index, arxiv_obj in paper_dict.items():
-        ret = get_abstract(arxiv_obj)
+        retry_count = 0
+        while retry_count <= 5:
+            try:
+                ret = get_abstract(arxiv_obj)
+                time.sleep(1)
+                break
+            except:
+                retry_count += 1
         if verbose:
             print(index, ret)
-            time.sleep(1)
     if is_save:
         today=date.today()
         with open(f'papers_{today}.pkl', 'wb') as f:
