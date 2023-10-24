@@ -9,15 +9,18 @@ from datetime import date
 from research_topic import RESEARCH_TOPIC_DICT
 
 class OpenAIChat:
-    model = ChatOpenAI(openai_api_key=open('.openai_api_key').read().strip()) # ' model_name = 'gpt-4'gpt-3.5-turbo-0613'
-
+    model = {
+        "gpt-3.5": ChatOpenAI(openai_api_key=open('.openai_api_key').read().strip(), model_name='gpt-3.5-turbo'),
+        "gpt-4": ChatOpenAI(openai_api_key=open('.openai_api_key').read().strip(), model_name='gpt-4'),
+    }
+ 
     @classmethod
-    def chat(cls, request):
-        response = cls.model([HumanMessage(content=request)]).content
+    def chat(cls, request, model_name):
+        response = cls.model[model_name]([HumanMessage(content=request)]).content
         json_response = json.loads(response)
         return json_response
 
-def get_summary_score(arxiv_obj, topic):
+def get_summary_score(arxiv_obj, topic, cascade=False):
     meta_prompt = """
     You are a professional research assistant. Please read the title and the abstract of the paper I provide you below and summarize it into one sentence as concise as possible. Next, please judge if the paper is relevant to my current research topic.
 
@@ -46,7 +49,13 @@ def get_summary_score(arxiv_obj, topic):
     }}
     """
 
-    result = OpenAIChat.chat(meta_prompt.format(topic=topic, title=arxiv_obj.title, abstract=arxiv_obj.abstract)) 
+    models = ["gpt-3.5", "gpt-4"] if cascade else ["gpt-3.5"]
+    for model_name in models:
+        result = OpenAIChat.chat(meta_prompt.format(topic=topic, title=arxiv_obj.title, abstract=arxiv_obj.abstract), model_name=model_name) 
+        score = result.get('score', None)
+        if score is not None and score in ['0', '1', 0, 1]:
+            return result
+        
     return result
 
 # Note: as the candidate papers are all about artificial intelligence, the papers may look relevant to my research topic at a first glance. However, you should try to discriminate if indeed there will be a significant overlapping with my research topic, and use high scores sparingly. 
